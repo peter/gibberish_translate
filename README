@@ -1,0 +1,73 @@
+Gibberish Translate
+===============
+
+Various extensions to the Gibberish message catalog API for internationalizing Ruby on Rails
+user interfaces. The plugin adds:
+
+1. The Gibberish::Extractor class that can extract all message lookups from the source code of a Rails
+application (assuming messages are in single or double quotes).
+
+2. The Gibberish::Catalog class that can dump and load Gibberish YAML files while keeping track of the original english message that each message was translated from. This makes it possible to flag changed english messages.
+
+3. The Gibberish::TranslationsController class with a simple web UI for translating messages into different locales. The translations controller works directly against the corresponding Gibberish YAML file at RAILS_ROOT/lang/#{locale}.yml. Before saving a translation to the YAML file, the controller checks that any interpolation variables in the translation are the same as in the english text being translated from.
+
+4. Experimental: adds the method l to the Symbol class which avoids duplicating the english text when reusing message keys:
+
+Gibberish.current_language = :se
+
+"Course"[:general_course]
+=> "Kurs"
+
+:general_course.l
+=> "Kurs"
+
+Usage
+=======
+
+1. Add Gibberish message lookups to your Ruby and ERB files (see Gibberish plugin README for details):
+
+  flash[:notice] = "Thanks for posting"[:posting_confirm]
+
+2. Add routes for the translations controller in config/routes.rb:
+
+    Gibberish::Routes.translation_ui(map) if RAILS_ENV != "production"
+
+3. Visit /translations in your browser and start translating. You can see all translations, missing translations, and changed english texts. Translations are stored directly in RAILS_ROOT/lang/#{locale}.yml.
+
+NOTE: to get UTF8 encoded YAML files that you can hand edit, install the gem ya2yaml. This plugin will detect that gem and use it automatically.
+
+Message key reuse and naming
+============================
+
+I try to give each message key a prefix that shows what it relates to, such as "bookings", or "articles". This plugin allows the same message key to be used in multiple lookups. I use a "general" message key prefix for keys that are reused knowing that one should be careful with reuse of translations as translations can be quite context dependent. If the Gibberish::Extractor class finds two lookups with the same message key but different english texts it will throw an exception. Example of conflicting texts for the same key:
+
+# In posts.html.erb:
+<%= link_to "Back"[:general_back], posts_path %>
+
+# In articles.html.erb:
+<%= link_to "Return to index"[:general_back], posts_path %>
+
+Testing
+============================
+
+Here is an RSpec specification that I use to make sure my message lookups are consistent:
+
+# In spec/models/gibberish_spec.rb
+describe "The Gibberish Translate Plugin" do
+  it "should be able to extract Gibberish message lookups" do
+    Gibberish::Extractor.new.messages
+  end
+  
+  it "should have english texts for all symbol.l lookups (reused message keys)" do
+    Gibberish::Extractor.new.reused_keys.each { |key| key.to_sym.l }
+  end
+end
+
+TODO
+====
+
+1. Gibberish could figure out the hash of interpolation variables from the order of the variables in the english text.
+One could then allow re-ordering of the variables in translations without having to provide the variable values in a hash
+in the lookup.
+
+Copyright (c) 2007 Peter Marklund, released under the MIT license

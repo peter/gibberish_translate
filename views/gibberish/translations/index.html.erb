@@ -1,0 +1,118 @@
+<% 
+  @page_title = "Translations"
+ %>
+
+<p>
+  <b>Showing:</b> <%=  simple_filter(["all", "untranslated", "changed", "translated"])%>
+</p>
+
+<div>
+  <% form_tag(params, :method => :get, :style => "display: inline") do %>
+    <p>
+      <b>Key Pattern:</b>
+      <%= hidden_field_tag :filter, params[:filter] %>
+      <%= text_field_tag(:key_pattern, params[:key_pattern]) %>
+      <%= submit_tag "Search" %>
+      <%= link_to "clear", params.merge({:key_pattern => nil}) %>
+    </p>
+  <% end %>
+</div>
+
+<div>
+  <% form_tag(params, :method => :get, :style => "display: inline") do %>
+    <p>
+      <b>Translation Pattern:</b>
+      <%= hidden_field_tag :filter, params[:filter] %>
+      <%= text_field_tag(:text_pattern, params[:text_pattern]) %>
+      <%= submit_tag "Search" %>
+      <%= link_to "clear", params.merge({:text_pattern => nil}) %>
+    </p>
+  <% end %>
+</div>
+
+
+<div>
+  <% form_tag(params, :method => :get) do %>
+    <p>
+      <b>Locale:</b>
+      <%= text_field_tag(:translation_locale, translation_locale, :size => 2) %>
+      <%= submit_tag "Show" %>
+    </p>
+  <% end %>
+</div>
+
+<p>
+  <%= link_to "Reload english messages from code", translations_reload_path %>
+</p>
+
+<% if translation_locale && @keys.size > 0 %>
+<p>
+  Showing: <%= 1+offset %>-<%= [offset+per_page, @keys.size].min %> out of <%= @keys.size %> messages
+</p>
+
+<% if n_pages > 1 %>
+<p>
+  Page: <%= simple_filter((1..n_pages).to_a, :page, params[:page]) %>
+</p>
+<% end %>
+
+<% form_tag(translate_path) do %>
+<p>
+  <%= submit_tag "Translate" %>
+</p>
+
+<table id="messages" border="1">
+  <tr>
+    <th>Key</th>
+    <th>Translation</th>
+  </tr>
+  <% @paginated_keys.each do |key|
+       en_text = @en_messages[key]
+       translated_text = @translated_messages[key] ? @translated_messages[key][:to] : ''
+       n_lines = en_text.split("\n").size
+       line_size = 100
+       if n_lines == 1 && en_text.length > line_size
+         n_lines = en_text.length / line_size + 1
+       end
+  %>
+    <tr>
+      <td><b><%=h key %></b></td>
+      <td>
+        <% if @translated_messages[key] && (@translated_messages[key][:from] != @en_messages[key]) %>
+          <p>
+            <b>Translated from:</b>
+          </p>
+          <%= simple_format(h(@translated_messages[key][:from])) %>
+          <p>
+            <b>Current message:</b>
+          </p>
+          <%= simple_format(h(en_text)) %>
+        <% else %>
+          <%= simple_format(h(en_text)) %>
+        <% end %>
+
+        <% if n_lines > 1 %>
+          <%= text_area_tag(key, translated_text, :size => "#{line_size}x#{n_lines}") %>
+        <% else %>
+          <%= text_field_tag(key, translated_text, :size => line_size) %>
+        <% end %>
+      </td>
+    </tr>
+  <% end %>
+</table>
+
+<p>
+  <%= submit_tag "Translate" %>
+</p>
+<% end %>
+<% else %>
+  <p>
+    No messages.
+  </p>
+  
+  <% if !translation_locale %>
+    <p>
+      <b>Please set translation locale above.</b>
+    </p>
+  <% end %>
+<% end %>
